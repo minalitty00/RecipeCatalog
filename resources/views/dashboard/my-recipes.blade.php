@@ -1,86 +1,109 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Мои рецепты
-        </h2>
-    </x-slot>
+    <div class="container py-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-journal-text" style="color: #ff9a9e;"></i> Мои рецепты
+            </h2>
+            <a href="{{ route('recipes.create') }}" class="btn btn-pink">
+                <i class="bi bi-plus-circle"></i> Создать рецепт
+            </a>
+        </div>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            @if($recipes->count() > 0)
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle"></i> {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+        @if($recipes->count() > 0)
+            <div class="card" style="border-radius: 20px;">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Рецепт</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Рейтинг</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Комментарии</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Статус</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
+                                    <th>Рецепт</th>
+                                    <th>Категория</th>
+                                    <th>Рейтинг</th>
+                                    <th>Комментарии</th>
+                                    <th>Статус</th>
+                                    <th>Дата</th>
+                                    <th>Действия</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody>
                                 @foreach($recipes as $recipe)
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="flex items-center">
+                                    <tr>
+                                        <td>
+                                            <strong>{{ $recipe->title }}</strong>
                                             @if($recipe->image)
-                                            <img src="{{ asset('storage/' . $recipe->image) }}" alt="{{ $recipe->title }}" class="w-12 h-12 object-cover rounded mr-3">
-                                            @else
-                                            <div class="w-12 h-12 bg-gray-200 rounded mr-3"></div>
+                                                <br><small class="text-muted"><i class="bi bi-image"></i> Есть фото</small>
                                             @endif
-                                            <div>
-                                                <div class="text-sm font-medium text-gray-900">{{ $recipe->title }}</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ $recipe->category->name ?? 'Без категории' }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-star-fill"></i> {{ number_format($recipe->ratings->avg('rating') ?? 0, 1) }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ $recipe->comments->count() }}</span>
+                                        </td>
+                                        <td>
+                                            @if($recipe->is_published)
+                                                <span class="badge bg-success">
+                                                    <i class="bi bi-check-circle"></i> Опубликован
+                                                </span>
+                                            @else
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="bi bi-hourglass-split"></i> На модерации
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td>{{ $recipe->created_at->format('d.m.Y') }}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{{ route('recipes.show', $recipe->slug) }}" class="btn btn-sm btn-outline-info" target="_blank">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="{{ route('recipes.edit', $recipe) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <form action="{{ route('recipes.destroy', $recipe) }}" method="POST" class="d-inline"
+                                                      onsubmit="return confirm('Удалить рецепт?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ number_format($recipe->rating, 1) }} ⭐ ({{ $recipe->ratings_count }})
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $recipe->comments_count }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        @if($recipe->is_published)
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                            Опубликован
-                                        </span>
-                                        @else
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                            Черновик
-                                        </span>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ $recipe->created_at->format('d.m.Y') }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <a href="{{ route('recipes.show', $recipe->slug) }}" class="text-blue-600 hover:text-blue-900 mr-3">Открыть</a>
-                                    </td>
-                                </tr>
+                                        </td>
+                                    </tr>
                                 @endforeach
                             </tbody>
                         </table>
                     </div>
-                    
-                    <div class="mt-4">
-                        {{ $recipes->links() }}
-                    </div>
                 </div>
             </div>
-            @else
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-center">
-                    <svg class="w-24 h-24 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                    <p class="text-gray-600 text-lg">У вас пока нет рецептов</p>
+            
+            <div class="mt-4 d-flex justify-content-center">
+                {{ $recipes->links() }}
+            </div>
+        @else
+            <div class="card text-center" style="border-radius: 20px; padding: 3rem;">
+                <div class="card-body">
+                    <i class="bi bi-journal-x" style="font-size: 4rem; color: #aaa;"></i>
+                    <h4 class="mt-3">У вас пока нет рецептов</h4>
+                    <p class="text-muted">Создайте свой первый рецепт и поделитесь им с другими!</p>
+                    <a href="{{ route('recipes.create') }}" class="btn btn-pink mt-3">
+                        <i class="bi bi-plus-circle"></i> Создать рецепт
+                    </a>
                 </div>
             </div>
-            @endif
-        </div>
+        @endif
     </div>
 </x-app-layout>

@@ -6,7 +6,6 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\RecipeController as AdminRecipeController;
 use App\Http\Controllers\Admin\CommentController as AdminCommentController;
 use App\Http\Controllers\Admin\IngredientController as AdminIngredientController;
-use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\MyRecipesController;
 use App\Http\Controllers\Dashboard\FavoritesController;
 use Illuminate\Support\Facades\Route;
@@ -19,9 +18,21 @@ Route::get('/', function () {
 Route::get('/', [RecipeController::class, 'index'])->name('recipes.index');
 Route::get('/recipes/{recipe:slug}', [RecipeController::class, 'show'])->name('recipes.show');
 
+// Создание и редактирование рецептов (для авторизованных)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/recipes-create', [RecipeController::class, 'create'])->name('recipes.create');
+    Route::post('/recipes', [RecipeController::class, 'store'])->name('recipes.store');
+    Route::get('/recipes/{recipe}/edit', [RecipeController::class, 'edit'])->name('recipes.edit');
+    Route::put('/recipes/{recipe}', [RecipeController::class, 'update'])->name('recipes.update');
+    Route::delete('/recipes/{recipe}', [RecipeController::class, 'destroy'])->name('recipes.destroy');
+    
+    // Рейтинги и комментарии
+    Route::post('/recipes/{recipe}/rate', [RecipeController::class, 'rate'])->name('recipes.rate');
+    Route::post('/recipes/{recipe}/comment', [RecipeController::class, 'comment'])->name('recipes.comment');
+});
+
 // Личный кабинет (для авторизованных пользователей)
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/my-recipes', [MyRecipesController::class, 'index'])->name('my-recipes.index');
     Route::get('/favorites', [FavoritesController::class, 'index'])->name('favorites.index');
     Route::post('/favorites/{recipe}', [FavoritesController::class, 'toggle'])->name('favorites.toggle');

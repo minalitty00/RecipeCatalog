@@ -13,7 +13,11 @@
 
             <!-- Картинка -->
             @if($recipe->image)
-                <img src="{{ $recipe->image }}" class="img-fluid rounded-4 w-100 mb-4" alt="{{ $recipe->title }}" style="max-height: 400px; object-fit: cover;">
+                @if(str_starts_with($recipe->image, 'http'))
+                    <img src="{{ $recipe->image }}" class="img-fluid rounded-4 w-100 mb-4" alt="{{ $recipe->title }}" style="max-height: 400px; object-fit: cover;">
+                @else
+                    <img src="{{ asset('storage/' . $recipe->image) }}" class="img-fluid rounded-4 w-100 mb-4" alt="{{ $recipe->title }}" style="max-height: 400px; object-fit: cover;">
+                @endif
             @else
                 <img src="https://via.placeholder.com/800x400/fecfef/ff9a9e?text=🍳+{{ $recipe->title }}" class="img-fluid rounded-4 w-100 mb-4" alt="{{ $recipe->title }}" style="max-height: 400px; object-fit: cover;">
             @endif
@@ -82,6 +86,61 @@
                     <li class="list-group-item text-muted" style="border: none;">Шаги не добавлены</li>
                 @endforelse
             </ol>
+
+            <!-- Комментарии -->
+            <h4 class="mt-5">💬 Комментарии ({{ $recipe->comments->count() }})</h4>
+            
+            @auth
+                <div class="card mb-4" style="border-radius: 20px;">
+                    <div class="card-body">
+                        <form action="{{ route('recipes.comment', $recipe->id) }}" method="POST">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="comment" class="form-label fw-bold">Оставить комментарий:</label>
+                                <textarea class="form-control" id="comment" name="comment" rows="3" 
+                                          placeholder="Поделитесь своим мнением о рецепте..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-pink">
+                                <i class="bi bi-send"></i> Отправить
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @else
+                <div class="alert alert-info mb-4" style="border-radius: 16px;">
+                    <a href="{{ route('login') }}" class="alert-link">Войдите</a>, чтобы оставить комментарий
+                </div>
+            @endauth
+
+            <!-- Список комментариев -->
+            @forelse($recipe->comments()->with('user')->latest()->get() as $comment)
+                <div class="card mb-3" style="border-radius: 16px;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <strong>{{ $comment->user->name }}</strong>
+                                <small class="text-muted ms-2">{{ $comment->created_at->diffForHumans() }}</small>
+                            </div>
+                            @if(auth()->check() && (auth()->id() === $comment->user_id || auth()->user()->isAdmin()))
+                                <form action="{{ route('admin.comments.destroy', $comment) }}" method="POST" 
+                                      onsubmit="return confirm('Удалить комментарий?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+                        <p class="mb-0">{{ $comment->body }}</p>
+                    </div>
+                </div>
+            @empty
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
+                    <p class="mt-2">Пока нет комментариев. Будьте первым!</p>
+                </div>
+            @endforelse
         </div>
 
         <!-- Правая колонка — рейтинг и действия -->
@@ -109,12 +168,30 @@
 
                 <!-- Кнопки действий -->
                 @auth
-                    <button class="btn btn-pink w-100 mb-2">
-                        <i class="bi bi-star"></i> Оценить
-                    </button>
-                    <button class="btn btn-outline-pink w-100 mb-2">
-                        <i class="bi bi-heart"></i> В избранное
-                    </button>
+                    <!-- Форма оценки -->
+                    <form action="{{ route('recipes.rate', $recipe->id) }}" method="POST" class="mb-3">
+                        @csrf
+                        <label class="form-label fw-bold">Ваша оценка:</label>
+                        <div class="d-flex gap-2 mb-2">
+                            @for($i = 1; $i <= 5; $i++)
+                                <input type="radio" class="btn-check" name="rating" id="rating{{ $i }}" value="{{ $i }}" required>
+                                <label class="btn btn-outline-warning" for="rating{{ $i }}" style="border-radius: 50%; width: 45px; height: 45px; padding: 0; font-size: 1.2rem;">
+                                    {{ $i }}⭐
+                                </label>
+                            @endfor
+                        </div>
+                        <button type="submit" class="btn btn-pink w-100">
+                            <i class="bi bi-star"></i> Оценить
+                        </button>
+                    </form>
+
+                    <!-- Избранное -->
+                    <form action="{{ route('favorites.toggle', $recipe->id) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-pink w-100 mb-2">
+                            <i class="bi bi-heart"></i> В избранное
+                        </button>
+                    </form>
                 @else
                     <div class="alert alert-info" style="border-radius: 16px;">
                         <a href="{{ route('login') }}" class="alert-link">Войдите</a>, чтобы оценить или добавить в избранное
@@ -123,12 +200,16 @@
 
                 @can('update', $recipe)
                     <hr>
-                    <a href="#" class="btn btn-outline-secondary w-100 mb-2">
+                    <a href="{{ route('recipes.edit', $recipe) }}" class="btn btn-outline-secondary w-100 mb-2">
                         <i class="bi bi-pencil"></i> Редактировать
                     </a>
-                    <button class="btn btn-outline-danger w-100">
-                        <i class="bi bi-trash"></i> Удалить
-                    </button>
+                    <form action="{{ route('recipes.destroy', $recipe) }}" method="POST" onsubmit="return confirm('Удалить рецепт?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            <i class="bi bi-trash"></i> Удалить
+                        </button>
+                    </form>
                 @endcan
             </div>
         </div>

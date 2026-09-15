@@ -1,7 +1,11 @@
 <div class="col-md-6 col-xl-4">
     <div class="card card-recipe h-100">
         @if($recipe->image)
-            <img src="{{ $recipe->image }}" class="card-img-top" alt="{{ $recipe->title }}">
+            @if(str_starts_with($recipe->image, 'http'))
+                <img src="{{ $recipe->image }}" class="card-img-top" alt="{{ $recipe->title }}">
+            @else
+                <img src="{{ asset('storage/' . $recipe->image) }}" class="card-img-top" alt="{{ $recipe->title }}">
+            @endif
         @else
             <img src="https://via.placeholder.com/600x400/fecfef/ff9a9e?text=🍳+Recipe" class="card-img-top" alt="placeholder">
         @endif
@@ -36,6 +40,13 @@
                 </span>
                 <span style="font-size:0.8rem; color:#999;">
                     {{ number_format($rating, 1) }} ({{ $recipe->rating_count ?? 0 }})
+                </span>
+            </div>
+
+            <!-- Комментарии -->
+            <div class="mb-2">
+                <span class="recipe-meta">
+                    <i class="bi bi-chat-dots"></i> {{ $recipe->comments_count ?? 0 }} комментариев
                 </span>
             </div>
 
